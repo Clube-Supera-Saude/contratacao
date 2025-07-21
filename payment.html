@@ -279,6 +279,18 @@
                             <span class="error-message">Campo obrigatório.</span>
                         </div>
                     </div>
+                     <!-- NOVO CAMPO: Tipo de Conta -->
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="accountType">Tipo de Conta *</label>
+                            <select id="accountType" name="accountType" required>
+                                <option value="">Selecione</option>
+                                <option value="corrente">Corrente</option>
+                                <option value="poupanca">Poupança</option>
+                            </select>
+                            <span class="error-message">Campo obrigatório.</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Detalhes para Débito à Vista (Anual) -->
@@ -323,6 +335,8 @@
     </div>
 
     <script>
+        const BACKEND_URL = 'https://superasaude-api.onrender.com'; // **ATENÇÃO: SUBSTITUA PELA SUA URL REAL DO RENDER.COM**
+
         document.addEventListener('DOMContentLoaded', () => {
             const cadastroDataRaw = localStorage.getItem('cadastroData');
             const paymentForm = document.getElementById('paymentForm');
@@ -356,9 +370,10 @@
 
                 // Exibir resumo dos dados iniciais
                 document.getElementById('summaryNomeCompleto').textContent = cadastroData.nomeCompleto || 'N/A';
-                document.getElementById('summaryEmail').textContent = cadastroData.email || 'N/A';
+                document.getElementById('summaryEmail').textContent = cadastroData.email || 'N/A'; // Usando 'email' sem hífen
                 
                 let planDescription = 'N/A';
+                // Usando cadastroData.selectedPlanType para pegar o plano
                 if (cadastroData.selectedPlanType && plans[cadastroData.selectedPlanType]) {
                     planDescription = plans[cadastroData.selectedPlanType].description;
                 }
@@ -368,7 +383,7 @@
                 
             } else {
                 alert('Nenhum dado de cadastro encontrado. Por favor, retorne à página anterior.');
-                window.location.href = 'landingpage.html'; // Redireciona de volta
+                window.location.href = 'index.html'; // Redireciona de volta
                 return;
             }
 
@@ -505,8 +520,8 @@
 
                 const paymentData = {
                     frequency: selectedFrequency,
-                    method: selectedMethod,
-                    amount: finalPrice // O valor final calculado
+                    metodoPagamento: selectedMethod, // **Mapeado para 'metodoPagamento'**
+                    valor: finalPrice // **Mapeado para 'valor'**
                 };
 
                 // Validação e coleta de dados específicos de cada método
@@ -516,15 +531,31 @@
                     const cardName = document.getElementById('cardName');
                     const expiryDate = document.getElementById('expiryDate');
                     const cvv = document.getElementById('cvv');
+                    
                     requiredInputsForMethod.push(cardNumber, cardName, expiryDate, cvv);
+
+                    // **Adiciona dados do cartão ao paymentData**
+                    paymentData.numeroCartao = cardNumber.value;
+                    paymentData.nomeTitular = cardName.value;
+                    paymentData.validadeCartao = expiryDate.value;
+                    paymentData.cvv = cvv.value;
+
                     if (selectedMethod === 'credit_card_annual') {
                         paymentData.installments = installmentsSelect.value;
                     }
                 } else if (selectedMethod === 'debit_account') {
                     const bankName = document.getElementById('bankName');
                     const agency = document.getElementById('agency');
-                    const account = document.getElementById('account'); // Correção do erro de digitação
-                    requiredInputsForMethod.push(bankName, agency, account);
+                    const account = document.getElementById('account');
+                    const accountType = document.getElementById('accountType'); // **Novo campo**
+
+                    requiredInputsForMethod.push(bankName, agency, account, accountType); // **Adicionado accountType**
+
+                    // **Adiciona dados de débito em conta ao paymentData**
+                    paymentData.banco = bankName.value;
+                    paymentData.agencia = agency.value;
+                    paymentData.conta = account.value;
+                    paymentData.tipoConta = accountType.value; // **Adicionado tipoConta**
                 }
                 // Para PIX e Boleto, os dados já são "fixos" ou simulados
 
@@ -537,12 +568,13 @@
                 if (formIsValid) {
                     const fullAdesaoData = {
                         cadastro: cadastroData, // Dados do titular e dependentes da landingpage
-                        pagamento: paymentData // Dados de pagamento e frequência
+                        pagamento: paymentData, // Dados de pagamento e frequência
+                        plano: cadastroData.selectedPlanType // **Adicionado o plano no nível raiz, como o backend espera**
                     };
                     console.log('Dados completos para envio ao backend:', fullAdesaoData);
 
                     // --- INÍCIO DO CÓDIGO PARA ENVIAR PARA A API (COM TRATAMENTO DE STATUS DE PAGAMENTO) ---
-                    const apiUrl = 'https://superasaude-api.onrender.com/api/contratacao'; 
+                    const apiUrl = `${BACKEND_URL}/api/contratacao`; 
 
                     try {
                         const response = await fetch(apiUrl, {
@@ -566,7 +598,7 @@
                                 window.location.href = 'confirmation.html'; // Redireciona para o sucesso
                             } else {
                                 // Pagamento falhou (mas a requisição HTTP foi 200 OK)
-                                alert(`Falha no pagamento: ${result.paymentMessage}. Por favor, revise seus dados ou tente outra forma de pagamento.`);
+                                alert(`Falha no pagamento: ${result.paymentMessage || 'Erro desconhecido.'}. Por favor, revise seus dados ou tente outra forma de pagamento.`); // Fallback para undefined
                                 window.location.href = 'payment_failure.html'; // Redireciona para a falha
                             }
                         } else {
@@ -632,7 +664,7 @@
             };
 
             // Adiciona listener para validação ao sair do campo para todos os inputs relevantes
-            const allPaymentInputs = paymentForm.querySelectorAll('input[required], select[required]');
+            const allPaymentInputs = paymentForm.querySelectorAll('input[required], select[required]'); // Adicionado select[required]
             allPaymentInputs.forEach(input => {
                 input.addEventListener('blur', () => validateInput(input));
                 input.addEventListener('input', () => clearError(input)); // Limpa erro ao digitar

@@ -1,4 +1,3 @@
-<!-- landingpage.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contratação de Plano - Supera Saúde</title>
     <style>
-        /* ... Seu CSS aqui (não alterado) ... */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -114,7 +112,8 @@
         form input[type="email"],
         form input[type="tel"],
         form input[type="date"],
-        form input[type="number"] {
+        form input[type="number"],
+        form select { /* Adicionado para o select de gênero */
             width: calc(100% - 20px);
             padding: 10px;
             margin-bottom: 15px;
@@ -285,6 +284,21 @@
                     <div class="form-group full-width">
                         <label for="email">E-mail *</label>
                         <input type="email" id="email" name="email" required>
+                        <span class="error-message">Campo obrigatório.</span>
+                    </div>
+                </div>
+
+                <!-- NOVO CAMPO: Gênero -->
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="genero">Gênero *</label>
+                        <select id="genero" name="genero" required>
+                            <option value="">Selecione</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Feminino">Feminino</option>
+                            <option value="Nao Binario">Não Binário</option>
+                            <option value="Prefiro Nao Informar">Prefiro Não Informar</option>
+                        </select>
                         <span class="error-message">Campo obrigatório.</span>
                     </div>
                 </div>
@@ -562,7 +576,7 @@
             };
 
             // Adiciona listener para validação ao sair do campo
-            const allFormInputs = contractForm.querySelectorAll('input[required], input[type="email"], input[type="tel"]');
+            const allFormInputs = contractForm.querySelectorAll('input[required], select[required], input[type="email"], input[type="tel"]'); // Adicionado select[required]
             allFormInputs.forEach(input => {
                 input.addEventListener('blur', () => validateInput(input));
                 input.addEventListener('input', () => clearError(input)); // Limpa erro ao digitar
@@ -574,7 +588,7 @@
 
                 let formIsValid = true;
                 // Validar todos os inputs obrigatórios e específicos
-                const inputsToValidate = contractForm.querySelectorAll('input[required], input[type="email"], input[type="tel"]');
+                const inputsToValidate = contractForm.querySelectorAll('input[required], select[required], input[type="email"], input[type="tel"]'); // Adicionado select[required]
                 inputsToValidate.forEach(input => {
                     if (!validateInput(input)) {
                         formIsValid = false;
@@ -600,7 +614,7 @@
                 if (formIsValid) {
                     // 1. Coleta todos os dados do formulário em um objeto JavaScript
                     const formData = {};
-                    const inputs = contractForm.querySelectorAll('input'); // Seleciona todos os inputs
+                    const inputs = contractForm.querySelectorAll('input, select'); // Seleciona todos os inputs E SELECTS
                     inputs.forEach(input => {
                         // Ignora inputs de rádio não selecionados
                         if (input.type === 'radio' && !input.checked) {
