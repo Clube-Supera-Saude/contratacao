@@ -365,15 +365,54 @@
             };
 
             if (cadastroDataRaw) {
-                cadastroData = JSON.parse(cadastroDataRaw);
-                console.log('Dados de cadastro carregados:', cadastroData);
+                const originalCadastroData = JSON.parse(cadastroDataRaw);
+                console.log('Dados de cadastro originais carregados do localStorage:', originalCadastroData);
 
-                // Exibir resumo dos dados iniciais
+                // **NORMALIZAÇÃO DAS CHAVES PARA PADRÃO CAMELCASE/ASCII**
+                // Isso cria um novo objeto 'cadastroData' com chaves limpas para envio ao backend
+                cadastroData = {
+                    vendedor: originalCadastroData.vendedor,
+                    // Prioriza a chave padronizada, senão tenta variações da antiga (incluindo capitalizado)
+                    selectedPlanType: originalCadastroData.selectedPlanType || originalCadastroData.SelectedPlanType || originalCadastroData['Tipo de plano selecionado'],
+                    plano: originalCadastroData.plano, // Pode ser '0' ou o valor do plano
+                    nomeCompleto: originalCadastroData.nomeCompleto,
+                    cpf: originalCadastroData.cpf,
+                    dataNascimento: originalCadastroData.dataNascimento,
+                    rg: originalCadastroData.rg,
+                    celular: originalCadastroData.celular,
+                    email: originalCadastroData.email || originalCadastroData['e-mail'], // Prioriza 'email'
+                    genero: originalCadastroData.genero || originalCadastroData['gênero'], // Prioriza 'genero'
+                    cep: originalCadastroData.cep,
+                    rua: originalCadastroData.rua,
+                    numero: originalCadastroData.numero || originalCadastroData['número'], // Prioriza 'numero'
+                    complemento: originalCadastroData.complemento || '',
+                    bairro: originalCadastroData.bairro,
+                    cidade: originalCadastroData.cidade,
+                    estado: originalCadastroData.estado
+                };
+
+                // Normaliza dependentes se existirem e forem um array
+                if (Array.isArray(originalCadastroData.dependentes)) {
+                    cadastroData.dependentes = originalCadastroData.dependentes.map(dep => {
+                        return {
+                            nomeCompleto: dep.nomeCompleto || dep['nomeCompleto'], 
+                            dataNascimento: dep.dataNascimento || dep['dataNascimento'],
+                            cpf: dep.cpf || dep['cpf'],
+                            email: dep.email || dep['e-mail'], // CORRIGIDO: normaliza o email do dependente
+                            celular: dep.celular || dep['celular'] // CORRIGIDO: normaliza o celular do dependente
+                        };
+                    });
+                } else {
+                    cadastroData.dependentes = [];
+                }
+
+                console.log('Dados de cadastro NORMALIZADOS para envio ao backend:', cadastroData);
+
+                // Exibir resumo dos dados iniciais (agora usando as chaves normalizadas)
                 document.getElementById('summaryNomeCompleto').textContent = cadastroData.nomeCompleto || 'N/A';
-                document.getElementById('summaryEmail').textContent = cadastroData.email || 'N/A'; // Usando 'email' sem hífen
+                document.getElementById('summaryEmail').textContent = cadastroData.email || 'N/A'; 
                 
                 let planDescription = 'N/A';
-                // Usando cadastroData.selectedPlanType para pegar o plano
                 if (cadastroData.selectedPlanType && plans[cadastroData.selectedPlanType]) {
                     planDescription = plans[cadastroData.selectedPlanType].description;
                 }
@@ -392,7 +431,7 @@
             const paymentMethodsConfig = {
                 'monthly': [
                     { value: 'credit_card_monthly', label: 'Cartão de Crédito' },
-                    { value: 'debit_account', label: 'Débito em Conta' },
+                    { value: 'debit_account_monthly', label: 'Débito em Conta' }, // CORRIGIDO: valor padronizado
                     { value: 'pix_recorrente', label: 'PIX Recorrente' }
                 ],
                 'annual': [
@@ -466,7 +505,7 @@
                             populateInstallments(currentPrice);
                         }
                         break;
-                    case 'debit_account':
+                    case 'debit_account_monthly': // CORRIGIDO: caso para o valor padronizado
                         debitAccountDetails.style.display = 'block';
                         break;
                     case 'debit_at_sight':
@@ -519,9 +558,9 @@
                 const finalPrice = selectedFrequency === 'monthly' ? currentPlan.priceMonthly : currentPlan.priceAnnual;
 
                 const paymentData = {
-                    frequency: selectedFrequency,
-                    metodoPagamento: selectedMethod, // **Mapeado para 'metodoPagamento'**
-                    valor: finalPrice // **Mapeado para 'valor'**
+                    frequency: selectedFrequency, // 'monthly' ou 'annual' - Já são limpos
+                    method: selectedMethod,       // 'credit_card_monthly' etc. - Já são limpos
+                    amount: finalPrice            // O valor
                 };
 
                 // Validação e coleta de dados específicos de cada método
@@ -534,28 +573,28 @@
                     
                     requiredInputsForMethod.push(cardNumber, cardName, expiryDate, cvv);
 
-                    // **Adiciona dados do cartão ao paymentData**
+                    // Adiciona dados do cartão ao paymentData com chaves padronizadas
                     paymentData.numeroCartao = cardNumber.value;
                     paymentData.nomeTitular = cardName.value;
-                    paymentData.validadeCartao = expiryDate.value;
+                    paymentData.cardValidity = expiryDate.value; // CORRIGIDO: Usa a chave padronizada 'cardValidity'
                     paymentData.cvv = cvv.value;
 
                     if (selectedMethod === 'credit_card_annual') {
                         paymentData.installments = installmentsSelect.value;
                     }
-                } else if (selectedMethod === 'debit_account') {
+                } else if (selectedMethod === 'debit_account_monthly') { // CORRIGIDO: para o valor padronizado
                     const bankName = document.getElementById('bankName');
                     const agency = document.getElementById('agency');
                     const account = document.getElementById('account');
-                    const accountType = document.getElementById('accountType'); // **Novo campo**
+                    const accountType = document.getElementById('accountType'); 
 
-                    requiredInputsForMethod.push(bankName, agency, account, accountType); // **Adicionado accountType**
+                    requiredInputsForMethod.push(bankName, agency, account, accountType); 
 
-                    // **Adiciona dados de débito em conta ao paymentData**
-                    paymentData.banco = bankName.value;
-                    paymentData.agencia = agency.value;
-                    paymentData.conta = account.value;
-                    paymentData.tipoConta = accountType.value; // **Adicionado tipoConta**
+                    // Adiciona dados de débito em conta ao paymentData (serão ignorados pelo backend se não estiverem no schema)
+                    paymentData.bankName = bankName.value; 
+                    paymentData.agency = agency.value;     
+                    paymentData.account = account.value;   
+                    paymentData.accountType = accountType.value; 
                 }
                 // Para PIX e Boleto, os dados já são "fixos" ou simulados
 
@@ -567,11 +606,11 @@
 
                 if (formIsValid) {
                     const fullAdesaoData = {
-                        cadastro: cadastroData, // Dados do titular e dependentes da landingpage
-                        pagamento: paymentData, // Dados de pagamento e frequência
-                        plano: cadastroData.selectedPlanType // **Adicionado o plano no nível raiz, como o backend espera**
+                        cadastro: cadastroData, // Agora com as chaves normalizadas
+                        pagamento: paymentData, // Agora com as chaves normalizadas
+                        plano: cadastroData.selectedPlanType // Já é limpo
                     };
-                    console.log('Dados completos para envio ao backend:', fullAdesaoData);
+                    console.log('Dados completos para envio ao backend (COM CHAVES PADRONIZADAS):', fullAdesaoData);
 
                     // --- INÍCIO DO CÓDIGO PARA ENVIAR PARA A API (COM TRATAMENTO DE STATUS DE PAGAMENTO) ---
                     const apiUrl = `${BACKEND_URL}/api/contratacao`; 
@@ -590,33 +629,36 @@
                         if (response.ok) { // Se a resposta HTTP for 2xx (sucesso)
                             console.log('Resposta da API:', result);
                             
-                            // Salva a mensagem do pagamento no localStorage para a próxima página exibir
-                            localStorage.setItem('paymentResultMessage', result.paymentMessage);
-
-                            if (result.isPaymentSuccessful) {
+                            // A API backend agora retorna apenas 'message' no caso de sucesso/falha do pagamento
+                            // A mensagem será 'Dados recebidos com sucesso...' ou 'Pagamento Recusado.'
+                            if (result.message && result.message.includes('Contratação efetuada com sucesso')) {
                                 alert('Contratação finalizada com sucesso! Você será redirecionado para a página de confirmação.');
+                                localStorage.setItem('paymentResultMessage', 'Contratação efetuada com sucesso!'); // Salva mensagem de sucesso
                                 window.location.href = 'confirmation.html'; // Redireciona para o sucesso
                             } else {
-                                // Pagamento falhou (mas a requisição HTTP foi 200 OK)
-                                alert(`Falha no pagamento: ${result.paymentMessage || 'Erro desconhecido.'}. Por favor, revise seus dados ou tente outra forma de pagamento.`); // Fallback para undefined
+                                // Pagamento falhou ou mensagem inesperada (mas a requisição HTTP foi 200 OK)
+                                alert(`Falha na contratação: ${result.message || 'Erro desconhecido.'}. Por favor, revise seus dados ou tente outra forma de pagamento.`); 
+                                localStorage.setItem('paymentResultMessage', result.message || 'Falha na contratação.'); // Salva mensagem de falha
                                 window.location.href = 'payment_failure.html'; // Redireciona para a falha
                             }
                         } else {
                             // Se a API retornou um erro HTTP (ex: 400, 500)
                             console.error('Erro na resposta da API (status não OK):', result);
                             alert(`Erro ao finalizar contratação: ${result.message || 'Erro desconhecido no servidor'}. Por favor, tente novamente.`);
+                            localStorage.setItem('paymentResultMessage', result.message || 'Erro interno do servidor.');
                             // Opcional: Redirecionar para uma página de erro genérica ou permanecer aqui
                         }
                     } catch (error) {
                         // Erro de rede ou outro problema antes de receber uma resposta JSON
                         console.error('Erro ao conectar com a API ou parsear resposta:', error);
                         alert('Não foi possível conectar com o servidor ou processar a resposta. Verifique sua conexão ou tente novamente mais tarde.');
+                        localStorage.setItem('paymentResultMessage', 'Não foi possível conectar com o servidor. Verifique sua conexão.');
                         // Opcional: Redirecionar para uma página de erro de conexão
                     }
                     // --- FIM DO CÓDIGO PARA ENVIAR PARA A API ---
 
                 } else {
-                    alert('Por favor, preencha todos os campos obrigatórios e corrija os erros de pagamento.');
+                    alert('Por favor, preencha todos os campos obrigatórios e corrija os erros.');
                 }
             });
 
@@ -626,7 +668,12 @@
                     showError(input, 'Campo obrigatório.');
                     return false;
                 }
-                if (input && input.id === 'cardNumber' && input.value.trim() !== '' && !/^[0-9]{13,19}$/.test(input.value.replace(/\s/g, ''))) {
+                // Adiciona validação específica para o accountType select
+                if (input && input.id === 'accountType' && input.value === '') {
+                    showError(input, 'Por favor, selecione um tipo de conta.');
+                    return false;
+                }
+                if (input && input.id === 'cardNumber' && input.value.trim() !== '' && !/^[0-9\s]{13,19}$/.test(input.value)) { // Inclui espaços na validação
                     showError(input, 'Número do cartão inválido.');
                     return false;
                 }
@@ -664,17 +711,17 @@
             };
 
             // Adiciona listener para validação ao sair do campo para todos os inputs relevantes
-            const allPaymentInputs = paymentForm.querySelectorAll('input[required], select[required]'); // Adicionado select[required]
+            const allPaymentInputs = paymentForm.querySelectorAll('input[required], select[required]'); 
             allPaymentInputs.forEach(input => {
                 input.addEventListener('blur', () => validateInput(input));
-                input.addEventListener('input', () => clearError(input)); // Limpa erro ao digitar
+                input.addEventListener('input', () => clearError(input)); 
             });
 
             // Máscaras de input (reusadas)
             function applyMask(input, mask) {
-                if (!input) return; // Garante que o input existe
+                if (!input) return; 
                 input.addEventListener('input', (e) => {
-                    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                    let value = e.target.value.replace(/\D/g, ''); 
                     let maskedValue = '';
                     let k = 0;
                     for (let i = 0; i < mask.length; i++) {
@@ -684,10 +731,10 @@
                             } else {
                                 break;
                             }
-                        } else { // Caracteres literais da máscara
-                            if (value[k]) { // Adiciona o literal apenas se houver dígitos para preencher
+                        } else { 
+                            if (value[k]) { 
                                 maskedValue += mask[i];
-                            } else { // Se não houver mais dígitos, não adicione o literal no final
+                            } else { 
                                 break;
                             }
                         }
@@ -699,8 +746,8 @@
             applyMask(document.getElementById('cardNumber'), '0000 0000 0000 0000');
             applyMask(document.getElementById('expiryDate'), '00/00');
             applyMask(document.getElementById('cvv'), '000');
-            applyMask(document.getElementById('agency'), '0000'); // Exemplo de máscara para agência
-            applyMask(document.getElementById('account'), '0000000000000'); // Exemplo de máscara para conta
+            applyMask(document.getElementById('agency'), '0000'); 
+            applyMask(document.getElementById('account'), '0000000000000'); 
 
         });
     </script>
