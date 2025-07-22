@@ -398,8 +398,8 @@
                             nomeCompleto: dep.nomeCompleto || dep['nomeCompleto'], 
                             dataNascimento: dep.dataNascimento || dep['dataNascimento'],
                             cpf: dep.cpf || dep['cpf'],
-                            email: dep.email || dep['e-mail'], // CORRIGIDO: normaliza o email do dependente
-                            celular: dep.celular || dep['celular'] // CORRIGIDO: normaliza o celular do dependente
+                            email: dep.email || dep['e-mail'], // **CORRIGIDO: normaliza o email do dependente**
+                            celular: dep.celular || dep['celular'] // **CORRIGIDO: normaliza o celular do dependente**
                         };
                     });
                 } else {
@@ -431,7 +431,7 @@
             const paymentMethodsConfig = {
                 'monthly': [
                     { value: 'credit_card_monthly', label: 'Cartão de Crédito' },
-                    { value: 'debit_account_monthly', label: 'Débito em Conta' }, // CORRIGIDO: valor padronizado
+                    { value: 'debit_account_monthly', label: 'Débito em Conta' }, // **CORRIGIDO: valor padronizado**
                     { value: 'pix_recorrente', label: 'PIX Recorrente' }
                 ],
                 'annual': [
@@ -505,7 +505,7 @@
                             populateInstallments(currentPrice);
                         }
                         break;
-                    case 'debit_account_monthly': // CORRIGIDO: caso para o valor padronizado
+                    case 'debit_account_monthly': // **CORRIGIDO: caso para o valor padronizado**
                         debitAccountDetails.style.display = 'block';
                         break;
                     case 'debit_at_sight':
@@ -576,13 +576,13 @@
                     // Adiciona dados do cartão ao paymentData com chaves padronizadas
                     paymentData.numeroCartao = cardNumber.value;
                     paymentData.nomeTitular = cardName.value;
-                    paymentData.cardValidity = expiryDate.value; // CORRIGIDO: Usa a chave padronizada 'cardValidity'
+                    paymentData.cardValidity = expiryDate.value; // **CORRIGIDO: Usa a chave padronizada 'cardValidity'**
                     paymentData.cvv = cvv.value;
 
                     if (selectedMethod === 'credit_card_annual') {
                         paymentData.installments = installmentsSelect.value;
                     }
-                } else if (selectedMethod === 'debit_account_monthly') { // CORRIGIDO: para o valor padronizado
+                } else if (selectedMethod === 'debit_account_monthly') { // **CORRIGIDO: para o valor padronizado**
                     const bankName = document.getElementById('bankName');
                     const agency = document.getElementById('agency');
                     const account = document.getElementById('account');
